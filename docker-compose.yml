@@ -1,24 +1,19 @@
 version: '3.8'
 
 services:
-  facturador-frontend:
-    image: node:18-alpine
-    container_name: facturador-frontend
-    working_dir: /app
-    volumes:
-      - ./:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-    # Instalamos 'serve' explícitamente y luego construimos y servimos
-    command: >
-      sh -c "npm install && npm install serve && npm run build && npx serve -s dist -l 80"
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
-      - "3001:80"
-
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/src:/app/src
+    restart: always
     networks:
       - dokply
-    restart: always
 
 networks:
   dokply:
