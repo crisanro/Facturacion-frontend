@@ -14,7 +14,8 @@ services:
     command: >
       sh -c "npm install && npm install serve && npm run build && npx serve -s dist -l 80"
     ports:
-      - "80:80"
+      - "3001:80"
+
     networks:
       - dokply
     restart: always
