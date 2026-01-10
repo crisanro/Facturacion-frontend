@@ -8,13 +8,16 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
     container_name: facturador-frontend
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - BACKEND_HOST=facturacion-backend # CAMBIA ESTO si tu contenedor se llama diferente
+
     ports:
       - "3001:80"
     networks:
-      - dokply
+      - dokploy-network
     restart: always
 
 networks:
-  dokply:
-    name: dokply
-    driver: bridge
+  dokploy-network:
+    external: true
