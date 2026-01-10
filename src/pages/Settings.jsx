@@ -1,284 +1,170 @@
 import React, { useState, useEffect } from 'react';
 import {
-    MapPin,
-    Terminal,
-    Plus,
-    Trash2,
+    ShieldAlert,
+    RefreshCw,
+    Copy,
     Check,
-    X,
-    PlusCircle
+    Eye,
+    EyeOff,
+    Server,
+    Code
 } from 'lucide-react';
 import apiClient from '../api/apiClient';
 
 const Settings = () => {
-    const [establishments, setEstablishments] = useState([]);
-    const [points, setPoints] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [showAddEstab, setShowAddEstab] = useState(false);
-    const [showAddPoint, setShowAddPoint] = useState(false);
-
-    const [newEstab, setNewEstab] = useState({
-        codigo: '',
-        nombre_comercial: '',
-        direccion: ''
-    });
-
-    const [newPoint, setNewPoint] = useState({
-        establecimiento_id: '',
-        codigo: '',
-        nombre: ''
-    });
+    const [apiKey, setApiKey] = useState('');
+    const [showKey, setShowKey] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
-        fetchData();
+        const fetchKey = async () => {
+            setFetching(true);
+            try {
+                const res = await apiClient.get('/api/emitter');
+                if (res.data.data?.api_key) {
+                    setApiKey(res.data.data.api_key);
+                }
+            } catch (err) {
+                console.error('Error fetching key:', err);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchKey();
     }, []);
 
-    const fetchData = async () => {
+
+    const handleRegenerate = async () => {
+        const confirmed = window.confirm(
+            '¿ESTÁ SEGURO DE REGENERAR SU TOKEN DE AUTORIZACIÓN? \n\n' +
+            'Esto invalidará inmediatamente el token actual. Si tiene sistemas integrados activos, dejarán de funcionar hasta que actualice la llave.'
+        );
+
+        if (!confirmed) return;
+
         setLoading(true);
         try {
-            const [estRes, ptsRes] = await Promise.all([
-                apiClient.get('/api/establishments'),
-                apiClient.get('/api/puntos-emision')
-            ]);
-            setEstablishments(estRes.data.data);
-            setPoints(ptsRes.data.data);
+            const response = await apiClient.post('/api/auth/regenerate-key');
+            setApiKey(response.data.key);
+            setShowKey(true);
         } catch (error) {
-            console.error('Error fetching settings data:', error);
+            alert('Error al regenerar token');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddEstablishment = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await apiClient.post('/api/establishments', newEstab);
-            if (response.data.ok) {
-                setShowAddEstab(false);
-                setNewEstab({ codigo: '', nombre_comercial: '', direccion: '' });
-                fetchData();
-            }
-        } catch (error) {
-            alert('Error al crear establecimiento: ' + (error.response?.data?.error || error.message));
+    const copyToClipboard = () => {
+        if (!apiKey) {
+            alert('No hay llave para copiar. Regenera una si es necesario.');
+            return;
         }
+        navigator.clipboard.writeText(apiKey);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleAddPoint = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await apiClient.post('/api/puntos-emision', newPoint);
-            if (response.data.ok) {
-                setShowAddPoint(false);
-                setNewPoint({ establecimiento_id: '', codigo: '', nombre: '' });
-                fetchData();
-            }
-        } catch (error) {
-            alert('Error al crear punto de emisión');
-        }
-    };
-
-    const handleDeleteEstablishment = async (id) => {
-        if (!window.confirm('¿Eliminar establecimiento? Esto afectará a sus puntos de emisión.')) return;
-        try {
-            await apiClient.delete(`/api/establishments/${id}`);
-            fetchData();
-        } catch (error) {
-            alert('Error al eliminar');
-        }
-    };
-
-    const handleDeletePoint = async (id) => {
-        if (!window.confirm('¿Eliminar punto de emisión?')) return;
-        try {
-            await apiClient.delete(`/api/puntos-emision/${id}`);
-            fetchData();
-        } catch (error) {
-            alert('Error al eliminar');
-        }
-    };
-
-    if (loading) return <div className="p-10 text-center">Cargando estructura...</div>;
 
     return (
-        <div className="settings-page">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-white">Estructura Organizacional</h1>
-                <p className="text-muted">Administra tus locales y cajas de emisión.</p>
+        <div className="content-page animate-in">
+            <div className="mb-12">
+                <h1 className="text-3xl font-black mb-2">Configuración Avanzada</h1>
+                <p className="text-muted">Gestiona el acceso técnico y la integración con sistemas externos.</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-8">
-                {/* Section 1: Establishments */}
-                <div className="glass p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <MapPin className="text-primary" />
-                            <h2 className="text-xl font-bold">Establecimientos (Locales)</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                {/* API Key Management */}
+                <div className="glass p-10 rounded-3xl border-t-8 border-error">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="p-3 bg-error/10 text-error rounded-2xl">
+                            <ShieldAlert size={28} />
                         </div>
-                        <button
-                            onClick={() => setShowAddEstab(!showAddEstab)}
-                            className="flex items-center gap-2 text-sm bg-primary/20 text-primary px-3 py-2 rounded-lg hover:bg-primary/30 transition-colors"
-                        >
-                            {showAddEstab ? <X size={16} /> : <Plus size={16} />}
-                            {showAddEstab ? 'Cancelar' : 'Nuevo Local'}
-                        </button>
+                        <div>
+                            <h2 className="text-xl font-bold">Token de Autorización</h2>
+                            <p className="text-xs text-muted">Clave secreta para peticiones API.</p>
+                        </div>
                     </div>
 
-                    {showAddEstab && (
-                        <form onSubmit={handleAddEstablishment} className="mb-8 p-6 bg-white/5 rounded-xl border border-primary/20">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Código (Ej. 001)</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        maxLength="3"
-                                        placeholder="001"
-                                        value={newEstab.codigo}
-                                        onChange={(e) => setNewEstab({ ...newEstab, codigo: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Nombre Comercial</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Matriz Principal"
-                                        value={newEstab.nombre_comercial}
-                                        onChange={(e) => setNewEstab({ ...newEstab, nombre_comercial: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Dirección</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Quito, Ecuador"
-                                        value={newEstab.direccion}
-                                        onChange={(e) => setNewEstab({ ...newEstab, direccion: e.target.value })}
-                                        required
-                                    />
-                                </div>
+                    <div className="bg-error/5 border border-error/10 p-5 rounded-2xl mb-8">
+                        <p className="text-xs text-error font-medium leading-relaxed">
+                            <strong>ADVERTENCIA:</strong> Esta llave permite emitir documentos legales en su nombre.
+                            No la comparta, no la guarde en repositorios públicos y no la exponga en el frontend de aplicaciones externas.
+                        </p>
+                    </div>
+
+                    <div className="form-group mb-8">
+                        <label className="form-label">API Key Actual</label>
+                        <div className="relative">
+                            <input
+                                type={showKey ? 'text' : 'password'}
+                                className="form-input font-mono text-sm pr-20"
+                                readOnly
+                                value={apiKey || '••••••••••••••••••••••••••••••••••••••••••••••••'}
+                            />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                                <button
+                                    onClick={() => setShowKey(!showKey)}
+                                    className="p-2 text-muted hover:text-main"
+                                >
+                                    {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                                <button
+                                    onClick={copyToClipboard}
+                                    className="p-2 text-muted hover:text-primary"
+                                >
+                                    {copied ? <Check size={18} className="text-success" /> : <Copy size={18} />}
+                                </button>
                             </div>
-                            <button type="submit" className="btn-primary mt-4 py-2">Crear Establecimiento</button>
-                        </form>
-                    )}
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-white/5 text-muted border-b border-white/10">
-                                <tr>
-                                    <th className="px-4 py-3 font-semibold">Cód.</th>
-                                    <th className="px-4 py-3 font-semibold">Nombre</th>
-                                    <th className="px-4 py-3 font-semibold">Dirección</th>
-                                    <th className="px-4 py-3 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {establishments.map((est) => (
-                                    <tr key={est.id} className="hover:bg-white/5">
-                                        <td className="px-4 py-4 font-mono text-primary font-bold">{est.codigo}</td>
-                                        <td className="px-4 py-4">{est.nombre_comercial}</td>
-                                        <td className="px-4 py-4 text-muted">{est.direccion}</td>
-                                        <td className="px-4 py-4 text-right">
-                                            <button onClick={() => handleDeleteEstablishment(est.id)} className="text-error hover:bg-error/10 p-2 rounded-lg">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        </div>
                     </div>
+
+                    <button
+                        onClick={handleRegenerate}
+                        disabled={loading}
+                        className="btn-primary w-full bg-error hover:bg-error/80 shadow-error/20"
+                    >
+                        {loading ? <RefreshCw className="animate-spin" /> : <RefreshCw size={20} />}
+                        {loading ? 'Procesando...' : 'Regenerar Credenciales'}
+                    </button>
                 </div>
 
-                {/* Section 2: Emission Points */}
-                <div className="glass p-6 rounded-xl">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-3">
-                            <Terminal className="text-primary" />
-                            <h2 className="text-xl font-bold">Puntos de Emisión (Cajas)</h2>
+                {/* Integration Details */}
+                <div className="flex flex-col gap-8">
+                    <div className="glass p-10 rounded-3xl border-t-8 border-primary">
+                        <h2 className="text-xl font-bold mb-6 flex items-center gap-3">
+                            <Code size={24} className="text-primary" /> Documentación de Integración
+                        </h2>
+                        <p className="text-sm text-muted mb-8">
+                            Para integrar SRIFlow con su ERP o sistema propio, debe incluir la API Key en las cabeceras de sus peticiones HTTP.
+                        </p>
+
+                        <div className="bg-bg-secondary p-5 rounded-2xl border border-border font-mono text-xs text-primary mb-8 overflow-x-auto">
+                            <div>GET /api/credits</div>
+                            <div className="text-muted mt-2">Authorization: Bearer <span className="text-success">SU_REGEN_KEY</span></div>
                         </div>
-                        <button
-                            onClick={() => setShowAddPoint(!showAddPoint)}
-                            className="flex items-center gap-2 text-sm bg-primary/20 text-primary px-3 py-2 rounded-lg hover:bg-primary/30 transition-colors"
+
+                        <a
+                            href={`${import.meta.env.VITE_API_URL}/api-docs`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-secondary w-full text-center flex justify-center gap-2"
                         >
-                            {showAddPoint ? <X size={16} /> : <Plus size={16} />}
-                            {showAddPoint ? 'Cancelar' : 'Nueva Caja'}
-                        </button>
+                            Ver Swagger UI <Server size={18} />
+                        </a>
                     </div>
 
-                    {showAddPoint && (
-                        <form onSubmit={handleAddPoint} className="mb-8 p-6 bg-white/5 rounded-xl border border-primary/20">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Establecimiento</label>
-                                    <select
-                                        className="form-input bg-dark"
-                                        value={newPoint.establecimiento_id}
-                                        onChange={(e) => setNewPoint({ ...newPoint, establecimiento_id: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Seleccionar Local</option>
-                                        {establishments.map(e => <option key={e.id} value={e.id}>{e.codigo} - {e.nombre_comercial}</option>)}
-                                    </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Código (Ej. 100)</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        maxLength="3"
-                                        placeholder="100"
-                                        value={newPoint.codigo}
-                                        onChange={(e) => setNewPoint({ ...newPoint, codigo: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label text-xs">Nombre descriptivo</label>
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Caja Principal"
-                                        value={newPoint.nombre}
-                                        onChange={(e) => setNewPoint({ ...newPoint, nombre: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <button type="submit" className="btn-primary mt-4 py-2">Crear Punto</button>
-                        </form>
-                    )}
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-white/5 text-muted border-b border-white/10">
-                                <tr>
-                                    <th className="px-4 py-3 font-semibold">Cód.</th>
-                                    <th className="px-4 py-3 font-semibold">Nombre</th>
-                                    <th className="px-4 py-3 font-semibold">Local</th>
-                                    <th className="px-4 py-3 font-semibold text-right">Secuencial Actual</th>
-                                    <th className="px-4 py-3 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {points.map((pt) => (
-                                    <tr key={pt.id} className="hover:bg-white/5">
-                                        <td className="px-4 py-4 font-mono text-primary font-bold">{pt.codigo}</td>
-                                        <td className="px-4 py-4">{pt.nombre}</td>
-                                        <td className="px-4 py-4 text-muted">{pt.establecimiento?.codigo} - {pt.establecimiento?.nombre_comercial}</td>
-                                        <td className="px-4 py-4 text-right font-mono">{pt.secuencial_actual}</td>
-                                        <td className="px-4 py-4 text-right">
-                                            <button onClick={() => handleDeletePoint(pt.id)} className="text-error hover:bg-error/10 p-2 rounded-lg">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="glass p-8 rounded-3xl border border-border flex items-start gap-4">
+                        <div className="p-3 bg-glass rounded-2xl text-main">
+                            <ShieldAlert size={20} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold mb-1">Rotación de Seguridad</h4>
+                            <p className="text-xs text-muted leading-relaxed">
+                                Como buena práctica, recomendamos rotar sus llaves API cada 90 días o inmediatamente si sospecha de una filtración.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

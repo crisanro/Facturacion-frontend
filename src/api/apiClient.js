@@ -30,16 +30,25 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        const { response, config } = error;
+
+        console.error('🚀 API Error Details:', {
+            url: config?.url,
+            method: config?.method,
+            status: response?.status,
+            data: response?.data,
+            message: error.message
+        });
+
+        if (response && response.status === 401) {
             // Clear storage if unauthorized
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             Cookies.remove('access_token');
-
-            // Optional: window.location.href = '/login';
         }
         return Promise.reject(error);
     }
 );
+
 
 export default apiClient;

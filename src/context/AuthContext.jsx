@@ -36,30 +36,34 @@ export const AuthProvider = ({ children }) => {
                 Cookies.set('access_token', token, { expires: 7 });
 
                 setUser(userData);
-                return { success: true };
+                return { ok: true };
             }
-            return { success: false, error: response.data.error || 'Login failed' };
+            return { ok: false, error: response.data.error || 'Login failed' };
+
         } catch (error) {
             return {
-                success: false,
+                ok: false,
                 error: error.response?.data?.error || 'Server error connection'
             };
         }
+
     };
 
     const signup = async (formData) => {
         try {
             const response = await apiClient.post('/api/auth/signup', formData);
             if (response.data.ok) {
-                return { success: true, message: response.data.mensaje };
+                return { ok: true, mensaje: response.data.mensaje };
             }
-            return { success: false, error: response.data.error || 'Signup failed' };
+            return { ok: false, error: response.data.error || 'Signup failed' };
+
         } catch (error) {
             return {
-                success: false,
+                ok: false,
                 error: error.response?.data?.error || 'Server error connection'
             };
         }
+
     };
 
     const logout = () => {

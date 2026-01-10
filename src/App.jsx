@@ -13,6 +13,7 @@ import InvoiceHistory from './pages/InvoiceHistory';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 
+
 function App() {
     return (
         <Router>
@@ -79,6 +80,8 @@ function App() {
                     />
 
                     {/* Default Redirect */}
+
+
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                     {/* 404 Redirect */}
