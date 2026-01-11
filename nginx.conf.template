@@ -9,12 +9,43 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # 2. Configuración del Bridge (Proxy)
-    # Usamos una variable para el host del backend, inyectada por Docker
-    location /api-facturar {
-        # Resolver necesario para usar variables en proxy_pass (Docker DNS)
+    # 2. Proxy Gateway para el Backend (/api)
+    # Cualquier petición que empiece por /api se manda al contenedor backend
+    # Ej: /api/public/pdf/... -> http://backend:3000/api/public/pdf/...
+    location /api {
         resolver 127.0.0.11 valid=30s;
+        set $backend_upstream http://${BACKEND_HOST}:3000;
         
+        # Quitamos /api de la ruta si el backend no lo espera, 
+        # PERO si el backend sirve en /api, entonces pasamos tal cual.
+        # Asumiendo que el backend sirve en /api, usamos proxy_pass sin barra al final
+        proxy_pass $backend_upstream;
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 3. Proxy para MinIO (Opcional/Storage)
+    # Si necesitas acceder a archivos directos de MinIO saltándote el backend
+    # Usa la ruta /storage o /minio
+    location /minio {
+        resolver 127.0.0.11 valid=30s;
+        set $minio_upstream http://${MINIO_HOST}:9000;
+        
+        rewrite ^/minio/(.*) /$1 break;
+        proxy_pass $minio_upstream;
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 4. Compatibilidad Legacy (/api-facturar -> pasarela directa)
+    location /api-facturar {
+        resolver 127.0.0.11 valid=30s;
         set $backend_upstream http://${BACKEND_HOST}:3000;
         proxy_pass $backend_upstream/api/facturar;
         
