@@ -10,8 +10,8 @@ services:
     container_name: facturador-frontend
     environment:
       - VITE_API_URL=${VITE_API_URL}
-      - BACKEND_HOST=facturacion-backend # Nombre del contenedor backend
-      - MINIO_HOST=minio # Nombre del contenedor MinIO
+      - BACKEND_HOST=${BACKEND_HOST} # Nombre del contenedor backend
+      - MINIO_HOST=${MINIO_HOST} # Nombre del contenedor MinIO
 
     ports:
       - "3001:80"
